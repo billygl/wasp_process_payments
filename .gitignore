@@ -33,3 +33,5 @@ spa.traineddata
 credentials.json
 token.json
 .vercel
+
+vendor/
