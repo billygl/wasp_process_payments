@@ -6,8 +6,8 @@ const {google} = require('googleapis');
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
-const TOKEN_FILENAME = 'token.json';
-const CREDENTIALS_FILENAME = 'credentials.json';
+const TOKEN_FILENAME = null//'token.json';
+const CREDENTIALS_FILENAME = null //'credentials.json';
 const TOKEN_PATH = path.join(process.cwd(), TOKEN_FILENAME);
 const CREDENTIALS_PATH = path.join(process.cwd(), CREDENTIALS_FILENAME);
 
@@ -18,7 +18,10 @@ class GSS {
     }
     async loadSavedCredentialsIfExist() {
         try {
-            const content = await fs.readFile(TOKEN_PATH);
+            let content = process.env.TOKEN_JSON
+            if(TOKEN_PATH){
+                content = await fs.readFile(TOKEN_PATH);
+            }
             const credentials = JSON.parse(content);
             return google.auth.fromJSON(credentials);
         } catch (err) {
@@ -27,7 +30,10 @@ class GSS {
     }
 
     async saveCredentials(client) {
-        const content = await fs.readFile(CREDENTIALS_PATH);
+        let content = process.env.CREDENTIALS_JSON
+        if(CREDENTIALS_PATH){
+            content = await fs.readFile(CREDENTIALS_PATH);
+        }
         const keys = JSON.parse(content);
         const key = keys.installed || keys.web;
         const payload = JSON.stringify({

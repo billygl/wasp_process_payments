@@ -4,9 +4,11 @@ const express = require("express");
 
 const fs = require('fs');
 const path = require('path');
+const OCR = require('./api_nodejs/ocr');
 
 const BASE_URL = '/wpp'
 const OCR_URL = "https://api-nodejs-1cdfy69fn-billygls-projects.vercel.app/ocr"
+const localOCR = true
 
 const API_KEYS = [
     {
@@ -17,7 +19,7 @@ const API_KEYS = [
 const SS_ID = '1AEjbLYC64LNwW6yDoaicR39ZKU9zrtqT6PIYpUz7UFU'
 const SH_ID = 'pagos'
 const GROUP_IDS = [
-    '51997938975-1571774785@g.us', //B & J Home Stats
+    //'51997938975-1571774785@g.us', //B & J Home Stats
     '120363374831762604@g.us' //Constancias, pagos y otros comprobantes💰
 ]
 
@@ -73,6 +75,13 @@ const saveText = async (text) => {
     gss.append(text)
 }
 const processImage = async (image) => {
+    if(localOCR){
+        const ocr = new OCR();
+        await ocr.init()
+        const text = await ocr.processImage(req.body.image)
+        ocr.finish()
+        return text
+    }
     const response = await fetch(OCR_URL, {
         method: 'POST',
         headers: {
