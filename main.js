@@ -101,10 +101,10 @@ const processPayments = async (msg) => {
         return
     }
     const {from, to, author, notifyName, body, caption, type, timestamp} = msg
-    log(from, to, author, notifyName, body, caption, type, timestamp)
     if(!GROUP_IDS.includes(from)){
         return
     }
+    log(from, to, author, notifyName, body, caption, type, timestamp)
     if (msg.hasMedia) {
         const media = await msg.downloadMedia();
         if(!media){
@@ -116,6 +116,7 @@ const processPayments = async (msg) => {
         saveText(`${author}
 ${text}
 ${caption}
+${body}
 ${timestamp}`
         )
         await msg.react("🔄️")
