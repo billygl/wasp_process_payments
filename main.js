@@ -1,3 +1,4 @@
+require('dotenv').config();
 const WWBot = require('./wwbot');
 const GSS = require('./gss');
 const express = require("express");
@@ -78,7 +79,7 @@ const processImage = async (image) => {
     if(localOCR){
         const ocr = new OCR();
         await ocr.init()
-        const text = await ocr.processImage(req.body.image)
+        const text = await ocr.processImage(image)
         ocr.finish()
         return text
     }
@@ -112,14 +113,17 @@ const processPayments = async (msg) => {
         log(media.filename, media.mimetype)//, media.data
         const data = `data:${media.mimetype};base64,${media.data}`
         const text = await processImage(data)
-        saveText(`
-            ${author}\n\n
-            ${text}\n\n
-            ${caption}\n
-            ${timestamp}
-            `
+        saveText(`${author}
+${text}
+${caption}
+${timestamp}`
         )
         await msg.react("🔄️")
+    }else{
+        saveText(`${author}
+${body}
+${timestamp}`
+        )
     }
 }
 const logReaction = async (_reaction) => {
