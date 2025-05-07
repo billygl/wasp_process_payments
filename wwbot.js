@@ -30,6 +30,9 @@ class WWBot {
             this.client.on('message', msg => {
                 this.listener.onMessage(msg)
             });
+            this.client.on('message_reaction', reaction => {
+                this.listener.onReaction(reaction)
+            });
             this.client.initialize()
         })
     }

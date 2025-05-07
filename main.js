@@ -2,6 +2,8 @@ const WWBot = require('./wwbot');
 const GSS = require('./gss');
 const express = require("express");
 const {createWorker} = require('tesseract.js')
+const fs = require('fs');
+const path = require('path');
 
 const BASE_URL = '/wpp'
 const API_KEYS = [
@@ -12,6 +14,10 @@ const API_KEYS = [
 ]
 const SS_ID = '1AEjbLYC64LNwW6yDoaicR39ZKU9zrtqT6PIYpUz7UFU'
 const SH_ID = 'pagos'
+const GROUP_IDS = [
+    //'51997938975-1571774785@g.us', //B & J Home Stats
+    '120363374831762604@g.us' //Constancias, pagos y otros comprobantes💰
+]
 
 const app = express();
 
@@ -27,7 +33,28 @@ const gss = new GSS(SS_ID, SH_ID);
 app.get(BASE_URL + "/", (req, res) => {
     res.send("hello world");
 });
-function validate(req, res) {
+
+const logDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir);
+}
+
+const getLogFileName = () => {
+    const date = new Date();
+    const day = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    return path.join(logDir, `${day}.log`);
+};
+
+const logStream = () => fs.createWriteStream(getLogFileName(), { flags: 'a' });
+
+const log = (...args) => {
+    const timestamp = new Date().toISOString();
+    const message = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
+    const logMessage = `[${timestamp}] ${message}\n`;
+    console.log(logMessage.trim());
+    logStream().write(logMessage);
+};
+const validate = (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         res.status(401).send("Authorization header missing");
@@ -48,43 +75,58 @@ const saveText = async (text) => {
 }
 const processImage = async (image) => {
     const ret = await worker.recognize(image);
-    console.log(ret.data.text);
-    saveText(ret.data.text)
+    return ret.data.text.trim()
 }
 const processPayments = async (msg) => {
     if(!msg){
         return
     }
     const {from, to, author, notifyName, body, caption, type, timestamp} = msg
-    console.log(from, to, author, notifyName, body, caption, type, timestamp)
+    log(from, to, author, notifyName, body, caption, type, timestamp)
+    if(!GROUP_IDS.includes(from)){
+        return
+    }
     if (msg.hasMedia) {
         const media = await msg.downloadMedia();
         if(!media){
             return
         }
-        console.log("----",media.filename, media.mimetype)//, media.data
+        log(media.filename, media.mimetype)//, media.data
         const data = `data:${media.mimetype};base64,${media.data}`
-        await processImage(data)
+        const text = await processImage(data)
+        saveText(`
+            ${author}\n\n
+            ${text}\n\n
+            ${caption}\n
+            ${timestamp}
+            `
+        )
         await msg.react("🔄️")
     }
 }
+const logReaction = async (_reaction) => {
+    const {reaction, id, participant, timestamp} = _reaction
+    const {remote} = id
+    log(reaction, remote, participant, timestamp)
+}
 const listener = {
-    onMessage: processPayments
+    onMessage: processPayments,
+    onReaction: logReaction
 }
 app.get(BASE_URL + "/init", async (req, res) => {
     const customer = validate(req, res)
     if(!customer){
         return
     }
-    console.log("/init")
+    log("/init")
     await gss.authorize()
 
     listener.onQR = (dataURLQR) => {
-        console.log("onQR")
+        log("onQR")
         res.send(`<img src="${dataURLQR}" alt="QR Code"/>`);
     }
     listener.onReady = () => {
-        console.log("onReady")
+        log("onReady")
         res.send({
             status: 'ready'
         });
@@ -97,7 +139,7 @@ app.get(BASE_URL + "/finish", async (req, res) => {
     if(!customer){
         return
     }
-    console.log("/finish")
+    log("/finish")
     await worker.terminate();
 });
 
