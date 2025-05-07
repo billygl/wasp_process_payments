@@ -1,11 +1,13 @@
 const WWBot = require('./wwbot');
 const GSS = require('./gss');
 const express = require("express");
-const {createWorker} = require('tesseract.js')
+
 const fs = require('fs');
 const path = require('path');
 
 const BASE_URL = '/wpp'
+const OCR_URL = "https://api-nodejs-1cdfy69fn-billygls-projects.vercel.app/ocr"
+
 const API_KEYS = [
     {
         customer: 'test',
@@ -15,7 +17,7 @@ const API_KEYS = [
 const SS_ID = '1AEjbLYC64LNwW6yDoaicR39ZKU9zrtqT6PIYpUz7UFU'
 const SH_ID = 'pagos'
 const GROUP_IDS = [
-    //'51997938975-1571774785@g.us', //B & J Home Stats
+    '51997938975-1571774785@g.us', //B & J Home Stats
     '120363374831762604@g.us' //Constancias, pagos y otros comprobantes💰
 ]
 
@@ -24,13 +26,10 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded());
 
-let worker = null;
-(async () => {
-    worker = await createWorker('spa');
-})();
 const gss = new GSS(SS_ID, SH_ID);
 
 app.get(BASE_URL + "/", (req, res) => {
+    processImage()
     res.send("hello world");
 });
 
@@ -74,8 +73,18 @@ const saveText = async (text) => {
     gss.append(text)
 }
 const processImage = async (image) => {
-    const ret = await worker.recognize(image);
-    return ret.data.text.trim()
+    const response = await fetch(OCR_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ image })
+    })
+    const json = await response.json()
+    if(json && json.text){
+        return json.text
+    }
+    return ""
 }
 const processPayments = async (msg) => {
     if(!msg){
@@ -134,13 +143,5 @@ app.get(BASE_URL + "/init", async (req, res) => {
     const wwbot = new WWBot(customer, listener);
     await wwbot.init(true)
 });
-app.get(BASE_URL + "/finish", async (req, res) => {
-    const customer = validate(req, res)
-    if(!customer){
-        return
-    }
-    log("/finish")
-    await worker.terminate();
-});
 
-app.listen(process.env.PORT || 80, () => console.log("it is running"));
+app.listen(process.env.PORT || 1337, () => console.log("it is running"));

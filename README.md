@@ -1,8 +1,14 @@
-# wwbot
+# wasp process payments
 
 # run
+- main
 ````
-npm run start
+modemon main.js
+````
+- vercel in api_nodejs
+````
+vercel
+vercel --prod
 ````
 
 # getting started
