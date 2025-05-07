@@ -1,4 +1,6 @@
 const WWBot = require('./wwbot');
+const express = require("express");
+const {createWorker} = require('tesseract.js')
 
 const BASE_URL = '/wpp'
 const API_KEYS = [
@@ -7,11 +9,16 @@ const API_KEYS = [
         credential: 'TEe0LmQK0z'
     }
 ]
-const express = require("express");
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded());
+
+let worker = null;
+(async () => {
+    worker = await createWorker('spa');
+})();
+
 
 app.get(BASE_URL + "/", (req, res) => {
     res.send("hello world");
@@ -32,18 +39,25 @@ function validate(req, res) {
     }
     return customer
 }
+const processImage = async (image) => {
+    const ret = await worker.recognize(image);
+    console.log(ret.data.text);
+}
 const processPayments = async (msg) => {
+    if(!msg){
+        return
+    }
     const {from, to, author, notifyName, body, caption} = msg
     console.log(from, to, author, notifyName, body, caption)
     if (msg.hasMedia) {
         const media = await msg.downloadMedia();
-        // do something with the media data here
-        console.log("----",media.filename, media.mimetype)//, media.data
-        try{
-            await msg.react("👍") //not working
-        }catch(e){
-            console.error("error react")
+        if(!media){
+            return
         }
+        console.log("----",media.filename, media.mimetype)//, media.data
+        const data = `data:${media.mimetype};base64,${media.data}`
+        await processImage(data)
+        await msg.react("🔄️")
     }
 }
 const listener = {
@@ -67,6 +81,14 @@ app.get(BASE_URL + "/init", async (req, res) => {
     }
     const wwbot = new WWBot(customer, listener);
     await wwbot.init(true)
+});
+app.get(BASE_URL + "/finish", async (req, res) => {
+    const customer = validate(req, res)
+    if(!customer){
+        return
+    }
+    console.log("/finish")
+    await worker.terminate();
 });
 
 app.listen(process.env.PORT || 80, () => console.log("it is running"));

@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node ."
   },
+  "type":"commonjs",
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -12,6 +13,7 @@
   "dependencies": {
     "express": "^4.21.2",
     "qrcode": "^1.5.4",
+    "tesseract.js": "^6.0.1",
     "whatsapp-web.js": "^1.27.0"
   }
 }
