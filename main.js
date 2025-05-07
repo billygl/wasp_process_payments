@@ -1,4 +1,5 @@
 const WWBot = require('./wwbot');
+const GSS = require('./gss');
 const express = require("express");
 const {createWorker} = require('tesseract.js')
 
@@ -9,6 +10,9 @@ const API_KEYS = [
         credential: 'TEe0LmQK0z'
     }
 ]
+const SS_ID = '1AEjbLYC64LNwW6yDoaicR39ZKU9zrtqT6PIYpUz7UFU'
+const SH_ID = 'pagos'
+
 const app = express();
 
 app.use(express.json());
@@ -18,7 +22,7 @@ let worker = null;
 (async () => {
     worker = await createWorker('spa');
 })();
-
+const gss = new GSS(SS_ID, SH_ID);
 
 app.get(BASE_URL + "/", (req, res) => {
     res.send("hello world");
@@ -39,16 +43,20 @@ function validate(req, res) {
     }
     return customer
 }
+const saveText = async (text) => {
+    gss.append(text)
+}
 const processImage = async (image) => {
     const ret = await worker.recognize(image);
     console.log(ret.data.text);
+    saveText(ret.data.text)
 }
 const processPayments = async (msg) => {
     if(!msg){
         return
     }
-    const {from, to, author, notifyName, body, caption} = msg
-    console.log(from, to, author, notifyName, body, caption)
+    const {from, to, author, notifyName, body, caption, type, timestamp} = msg
+    console.log(from, to, author, notifyName, body, caption, type, timestamp)
     if (msg.hasMedia) {
         const media = await msg.downloadMedia();
         if(!media){
@@ -69,6 +77,8 @@ app.get(BASE_URL + "/init", async (req, res) => {
         return
     }
     console.log("/init")
+    await gss.authorize()
+
     listener.onQR = (dataURLQR) => {
         console.log("onQR")
         res.send(`<img src="${dataURLQR}" alt="QR Code"/>`);

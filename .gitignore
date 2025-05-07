@@ -30,3 +30,5 @@ Thumbs.db
 .wwebjs_cache/
 data*/
 spa.traineddata
+credentials.json
+token.json
