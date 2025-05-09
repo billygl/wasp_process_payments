@@ -18,7 +18,7 @@ const API_KEYS = [
     }
 ]
 const SS_ID = '1AEjbLYC64LNwW6yDoaicR39ZKU9zrtqT6PIYpUz7UFU'
-const SH_ID = 'pagos'
+const SH_ID = '💰pagos'
 const GROUP_IDS = [
     //'51997938975-1571774785@g.us', //B & J Home Stats
     '120363374831762604@g.us' //Constancias, pagos y otros comprobantes💰
@@ -110,6 +110,10 @@ const processPayments = async (msg) => {
         if(!media){
             return
         }
+        const WEP = 'image/webp'
+        if(media.mimetype === WEP){
+            return
+        }
         log(media.filename, media.mimetype)//, media.data
         const data = `data:${media.mimetype};base64,${media.data}`
         const text = await processImage(data)
@@ -119,7 +123,9 @@ ${caption}
 ${body}
 ${timestamp}`
         )
+        try{
         await msg.react("🔄️")
+        }catch(e){}
     }else{
         saveText(`${author}
 ${body}
@@ -136,26 +142,36 @@ const listener = {
     onMessage: processPayments,
     onReaction: logReaction
 }
-app.get(BASE_URL + "/init", async (req, res) => {
-    const customer = validate(req, res)
-    if(!customer){
-        return
-    }
+const init = async (customer, res) => {
     log("/init")
     await gss.authorize()
 
     listener.onQR = (dataURLQR) => {
         log("onQR")
-        res.send(`<img src="${dataURLQR}" alt="QR Code"/>`);
+        if(res){
+            res.send(`<img src="${dataURLQR}" alt="QR Code"/>`);
+        }
     }
     listener.onReady = () => {
         log("onReady")
-        res.send({
-            status: 'ready'
-        });
+        if(res){
+            res.send({
+                status: 'ready'
+            });
+        }
     }
     const wwbot = new WWBot(customer, listener);
     await wwbot.init(true)
+}
+app.get(BASE_URL + "/init", async (req, res) => {
+    const customer = validate(req, res)
+    if(!customer){
+        return
+    }
+    init(customer, res)
 });
 
-app.listen(process.env.PORT || 1337, () => console.log("it is running"));
+app.listen(process.env.PORT || 1337, () => {
+    console.log("it is running")
+    init(API_KEYS[0].customer, null)
+});
